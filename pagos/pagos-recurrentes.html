@@ -1,0 +1,812 @@
+<title>Corte y Pago</title>
+<style>
+  :root {
+    --paper: #EDEFF2;
+    --surface: #FDFDFE;
+    --surface-2: #F4F6F9;
+    --ink: #15181F;
+    --ink-2: #545C6B;
+    --ink-3: #7C8494;
+    --line: #DCE0E7;
+    --line-strong: #C3C9D4;
+    --accent: #1D5C55;
+    --accent-soft: #DDE9E6;
+    --crit: #A6271F;
+    --crit-soft: #F6E3E1;
+    --warn: #8A5A08;
+    --warn-soft: #F7EBD6;
+    --bbva: #14588F;
+    --bbva-soft: #DEEAF4;
+    --mp: #7E6100;
+    --mp-soft: #F5EDD3;
+    --shadow: 0 1px 2px rgba(21,24,31,.05), 0 8px 24px -16px rgba(21,24,31,.25);
+
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #101318;
+      --surface: #171B22;
+      --surface-2: #1E232C;
+      --ink: #E7EAF0;
+      --ink-2: #9AA3B3;
+      --ink-3: #798395;
+      --line: #2A303B;
+      --line-strong: #3A4250;
+      --accent: #63C4B4;
+      --accent-soft: #14302D;
+      --crit: #F09189;
+      --crit-soft: #3B1F1D;
+      --warn: #E3B463;
+      --warn-soft: #362912;
+      --bbva: #62AEE6;
+      --bbva-soft: #14293A;
+      --mp: #E0BE4C;
+      --mp-soft: #322A10;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #101318;
+    --surface: #171B22;
+    --surface-2: #1E232C;
+    --ink: #E7EAF0;
+    --ink-2: #9AA3B3;
+    --ink-3: #798395;
+    --line: #2A303B;
+    --line-strong: #3A4250;
+    --accent: #63C4B4;
+    --accent-soft: #14302D;
+    --crit: #F09189;
+    --crit-soft: #3B1F1D;
+    --warn: #E3B463;
+    --warn-soft: #362912;
+    --bbva: #62AEE6;
+    --bbva-soft: #14293A;
+    --mp: #E0BE4C;
+    --mp-soft: #322A10;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 32px 20px 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 600; margin: 0; text-wrap: balance; }
+  h1 { font-size: 30px; letter-spacing: -.015em; line-height: 1.15; }
+  h2 { font-size: 19px; letter-spacing: -.01em; }
+  h3 { font-size: 15px; }
+  p { margin: 0; }
+  .eyebrow {
+    font-size: 11px; font-weight: 600; letter-spacing: .11em; text-transform: uppercase;
+    color: var(--ink-3); font-family: var(--sans);
+  }
+
+  /* ---------- header ---------- */
+  header { display: flex; flex-direction: column; gap: 6px; }
+  header .sub { color: var(--ink-2); font-size: 14px; max-width: 62ch; }
+
+  /* ---------- alert ---------- */
+  .alert {
+    display: flex; gap: 13px; align-items: flex-start;
+    background: var(--crit-soft); border: 1px solid color-mix(in srgb, var(--crit) 32%, transparent);
+    border-radius: 4px; padding: 13px 15px;
+  }
+  .alert .bang {
+    font-family: var(--serif); font-size: 17px; font-weight: 700; color: var(--crit);
+    line-height: 1.4; flex: none;
+  }
+  .alert strong { color: var(--crit); }
+  .alert p { font-size: 13.5px; color: var(--ink); }
+  .alert .src { color: var(--ink-2); font-size: 12px; margin-top: 3px; }
+
+  /* ---------- summary ---------- */
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .tile {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+    padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; box-shadow: var(--shadow);
+  }
+  .tile .val {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: 25px; letter-spacing: -.02em; line-height: 1.2;
+  }
+  .tile .val.sm { font-size: 19px; }
+  .tile .foot { font-size: 12px; color: var(--ink-3); }
+
+  /* ---------- toggle ---------- */
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 2px; }
+  .seg button {
+    font: inherit; font-size: 13px; font-weight: 500; padding: 5px 15px; border: 0; border-radius: 3px;
+    background: transparent; color: var(--ink-2); cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+  .nav { display: inline-flex; align-items: center; gap: 4px; }
+  .nav .mes {
+    font-family: var(--mono); font-size: 13px; min-width: 12ch; text-align: center;
+    color: var(--ink-2); text-transform: capitalize;
+  }
+  .nav button, .today {
+    font: inherit; font-size: 13px; background: var(--surface); border: 1px solid var(--line);
+    color: var(--ink-2); border-radius: 3px; padding: 4px 9px; cursor: pointer; line-height: 1.4;
+  }
+  .nav button:hover, .today:hover, .seg button:hover { color: var(--ink); border-color: var(--line-strong); }
+
+  /* ---------- panel ---------- */
+  .panel {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .panel > header {
+    padding: 13px 16px; border-bottom: 1px solid var(--line); background: var(--surface-2);
+    flex-direction: row; align-items: baseline; justify-content: space-between; gap: 10px;
+  }
+
+  /* ---------- calendario ---------- */
+  .cal-scroll { overflow-x: auto; }
+  .cal { min-width: 620px; }
+  .cal .dow {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    border-bottom: 1px solid var(--line); background: var(--surface-2);
+  }
+  .cal .dow span {
+    font-size: 10.5px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase;
+    color: var(--ink-3); padding: 7px 9px; text-align: left;
+  }
+  .cal .grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cell {
+    min-height: 92px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    padding: 6px 7px 8px; display: flex; flex-direction: column; gap: 4px;
+  }
+  .cell:nth-child(7n) { border-right: 0; }
+  .cell.off { background: var(--surface-2); }
+  .cell.past .num { color: var(--ink-3); }
+  .cell .num {
+    font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 12px; color: var(--ink-2);
+  }
+  .cell.hoy .num {
+    background: var(--ink); color: var(--surface); border-radius: 999px;
+    width: 21px; height: 21px; display: grid; place-items: center; font-weight: 600;
+  }
+  .chip {
+    font-size: 11.5px; line-height: 1.3; padding: 3px 6px; border-radius: 3px;
+    border-left: 3px solid var(--accent); background: var(--accent-soft); color: var(--ink);
+    display: flex; justify-content: space-between; gap: 5px; align-items: baseline;
+  }
+  .chip .m { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 10.5px; color: var(--ink-2); flex: none; }
+  .chip.tarjeta { background: transparent; border: 1px dashed var(--line-strong); border-left: 3px solid var(--line-strong); }
+  .chip.bbva { border-left-color: var(--bbva); background: var(--bbva-soft); border-style: solid; border-width: 0 0 0 3px; }
+  .chip.mp { border-left-color: var(--mp); background: var(--mp-soft); border-style: solid; border-width: 0 0 0 3px; }
+  .chip.crit { border-left-color: var(--crit); background: var(--crit-soft); }
+  .chip.pagado { opacity: .45; text-decoration: line-through; }
+
+  /* ---------- timeline ---------- */
+  .row {
+    display: grid; grid-template-columns: 58px 1fr auto; gap: 14px; align-items: center;
+    padding: 12px 16px; border-bottom: 1px solid var(--line);
+  }
+  .row:last-child { border-bottom: 0; }
+  .row.pagado .nombre, .row.pagado .monto-in { opacity: .45; }
+  .row.pagado .nombre { text-decoration: line-through; }
+  .dia {
+    display: flex; flex-direction: column; align-items: center; gap: 0;
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    border-right: 1px solid var(--line); padding-right: 12px;
+  }
+  .dia .d { font-size: 21px; line-height: 1.1; letter-spacing: -.02em; }
+  .dia .m { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); }
+  .info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .nombre { font-weight: 600; font-size: 14.5px; }
+  .nombre .det { font-weight: 400; color: var(--ink-2); }
+  .meta { font-size: 12px; color: var(--ink-3); }
+  .meta.aviso { color: var(--warn); }
+  .right { display: flex; align-items: center; gap: 12px; }
+  .monto-in {
+    font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 15px;
+    width: 8.5ch; text-align: right; background: transparent; border: 0; border-bottom: 1px dashed var(--line-strong);
+    color: var(--ink); padding: 2px 0; -moz-appearance: textfield;
+  }
+  .monto-in::-webkit-outer-spin-button, .monto-in::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .monto-in::placeholder { color: var(--ink-3); }
+  .monto-in:focus { outline: none; border-bottom-color: var(--accent); }
+  .estado {
+    font: inherit; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+    padding: 4px 9px; border-radius: 3px; border: 1px solid transparent; cursor: pointer;
+    min-width: 10ch; text-align: center;
+  }
+  .estado.programado { background: var(--surface-2); color: var(--ink-2); border-color: var(--line); }
+  .estado.pronto { background: var(--warn-soft); color: var(--warn); }
+  .estado.hoy { background: var(--accent-soft); color: var(--accent); }
+  .estado.vencido { background: var(--crit-soft); color: var(--crit); }
+  .estado.pagado { background: transparent; color: var(--ink-3); border-color: var(--line); }
+
+  /* ---------- tarjetas ---------- */
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; box-shadow: var(--shadow); overflow: hidden; }
+  .card > .head {
+    padding: 12px 15px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  }
+  .card.bbva > .head { background: var(--bbva-soft); border-bottom-color: color-mix(in srgb, var(--bbva) 25%, transparent); }
+  .card.mp > .head { background: var(--mp-soft); border-bottom-color: color-mix(in srgb, var(--mp) 25%, transparent); }
+  .card .corte { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+  .card ul { list-style: none; margin: 0; padding: 6px 15px 12px; display: flex; flex-direction: column; gap: 5px; }
+  .card li { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; }
+  .card li span:last-child { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .card .vacio { padding: 12px 15px 15px; font-size: 13px; color: var(--ink-3); }
+  .card .total {
+    padding: 9px 15px; border-top: 1px solid var(--line); background: var(--surface-2);
+    display: flex; justify-content: space-between; font-size: 13px;
+  }
+  .card .total strong { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  /* ---------- asignación ---------- */
+  .asig { display: flex; flex-direction: column; }
+  .asig-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 16px; border-bottom: 1px solid var(--line); font-size: 14px;
+  }
+  .asig-row:last-child { border-bottom: 0; }
+  .asig-row .hint { font-size: 12px; color: var(--ink-3); }
+  select {
+    font: inherit; font-size: 13px; padding: 4px 8px; border-radius: 3px;
+    border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); cursor: pointer;
+  }
+
+  /* ---------- pendientes ---------- */
+  .pend { padding: 4px 0; }
+  .pend .pend-row {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding: 10px 16px; border-bottom: 1px solid var(--line);
+  }
+  .pend .pend-row:last-child { border-bottom: 0; }
+  .pend .por-que { font-size: 12.5px; color: var(--ink-2); text-align: right; max-width: 46ch; }
+
+  footer { font-size: 12.5px; color: var(--ink-3); border-top: 1px solid var(--line); padding-top: 14px; }
+  footer strong { color: var(--ink-2); font-weight: 600; }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: no-preference) {
+    .estado, .seg button, .chip { transition: background-color .12s ease, color .12s ease, opacity .12s ease; }
+  }
+  @media (max-width: 700px) {
+    .tiles { grid-template-columns: 1fr; }
+    .cards { grid-template-columns: 1fr; }
+    .row { grid-template-columns: 48px 1fr; }
+    .row .right { grid-column: 2; justify-content: flex-start; }
+    .pend .por-que { text-align: left; }
+    .pend .pend-row { flex-direction: column; gap: 3px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Pagos fijos · Jesús</p>
+    <h1>Corte y Pago</h1>
+    <p class="sub">Lo que se te va cada mes, cuándo vence y a qué plástico va. Los montos con fuente salieron de tus correos; los que faltan los puedes escribir aquí y se quedan guardados en este navegador.</p>
+  </header>
+
+  <div class="alert" id="alerta">
+    <span class="bang">!</span>
+    <div>
+      <p><strong>YouTube Premium rechazó tu cobro.</strong> Google no pudo procesar el pago: tarjeta vencida, saldo insuficiente o método no aceptado. Si no actualizas la forma de pago, se corta el servicio.</p>
+      <p class="src">Aviso de YouTube · 11 de agosto de 2026</p>
+    </div>
+  </div>
+
+  <div class="tiles">
+    <div class="tile">
+      <p class="eyebrow">Fijo mensual confirmado</p>
+      <p class="val" id="t-total">—</p>
+      <p class="foot" id="t-total-foot">—</p>
+    </div>
+    <div class="tile">
+      <p class="eyebrow">Falta pagar este mes</p>
+      <p class="val" id="t-pend">—</p>
+      <p class="foot" id="t-pend-foot">—</p>
+    </div>
+    <div class="tile">
+      <p class="eyebrow">Siguiente vencimiento</p>
+      <p class="val sm" id="t-next">—</p>
+      <p class="foot" id="t-next-foot">—</p>
+    </div>
+  </div>
+
+  <div class="bar">
+    <div class="seg" role="group" aria-label="Cambiar vista">
+      <button type="button" id="v-cal" aria-pressed="true">Calendario</button>
+      <button type="button" id="v-lin" aria-pressed="false">Línea de tiempo</button>
+    </div>
+    <div class="nav">
+      <button type="button" id="prev" aria-label="Mes anterior">←</button>
+      <span class="mes" id="mes-label">—</span>
+      <button type="button" id="next" aria-label="Mes siguiente">→</button>
+      <button type="button" class="today" id="hoy-btn">Hoy</button>
+    </div>
+  </div>
+
+  <section class="panel" id="panel-cal">
+    <div class="cal-scroll">
+      <div class="cal">
+        <div class="dow">
+          <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+        </div>
+        <div class="grid" id="cal-grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-lin" hidden>
+    <header>
+      <h2>Orden de vencimiento</h2>
+      <p class="eyebrow">Toca el estado para marcar pagado</p>
+    </header>
+    <div id="lin-body"></div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <h2>A qué tarjeta va cada cargo</h2>
+    <div class="panel asig" id="asig"></div>
+    <div class="cards">
+      <div class="card bbva">
+        <div class="head">
+          <h3>Tarjeta BBVA</h3>
+          <span class="corte">paga el 22</span>
+        </div>
+        <ul id="card-bbva"></ul>
+        <div class="total"><span>Cargos fijos asignados</span><strong id="tot-bbva">—</strong></div>
+      </div>
+      <div class="card mp">
+        <div class="head">
+          <h3>Tarjeta Mercado Pago</h3>
+          <span class="corte">paga el 16</span>
+        </div>
+        <ul id="card-mp"></ul>
+        <div class="total"><span>Cargos fijos asignados</span><strong id="tot-mp">—</strong></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <h2>Falta confirmar</h2>
+    <div class="panel pend">
+      <div class="pend-row">
+        <div><strong>Netflix</strong> <span class="meta">· cuenta activa a tu nombre</span></div>
+        <p class="por-que">Solo llegan correos de recomendaciones, ningún recibo. Revisa en qué tarjeta cae y por cuánto.</p>
+      </div>
+      <div class="pend-row">
+        <div><strong>Disney+</strong> <span class="meta">· cuenta activa</span></div>
+        <p class="por-que">Igual que Netflix: puro correo de contenido, sin comprobante de cobro.</p>
+      </div>
+      <div class="pend-row">
+        <div><strong>Spotify</strong> <span class="meta">· cuenta activa</span></div>
+        <p class="por-que">Sin recibos en el correo. Puede ser plan familiar de alguien más.</p>
+      </div>
+      <div class="pend-row">
+        <div><strong>CFE — luz</strong> <span class="meta">· bimestral, RPU 003250414888</span></div>
+        <p class="por-que">El aviso llega sin monto en el cuerpo del correo. Último aviso: 3 de agosto, ya por vencer.</p>
+      </div>
+      <div class="pend-row">
+        <div><strong>Apple TV</strong> <span class="meta">· venció</span></div>
+        <p class="por-que">Venía incluida con tu plan de Mercado Libre y ya expiró. Hoy no te cobra nada.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p><strong>De dónde salió cada dato.</strong> Totalplay, Movistar, Claude Pro, CFE y YouTube vienen de correos tuyos entre junio y agosto de 2026. Las fechas de la Mercado Pago (16) y la BBVA (22) me las diste tú: no llegan estados de cuenta de Mercado Pago a este correo, y el de BBVA viene protegido con contraseña, así que no pude leer los montos.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SERVICIOS = [
+    { id: "claude", nombre: "Claude Pro", detalle: "suscripción", dia: 1, monto: 349,
+      fuente: "Recibo de Anthropic del 31 jul · tarjeta ••0939", metodo: "" },
+    { id: "totalplay", nombre: "Totalplay", detalle: "internet 150 Mbps", dia: 11, monto: 408,
+      fuente: "Estado de cuenta del 6 ago · cuenta 0141299096",
+      aviso: "Pronto pago hasta el 11. Después son $455 y el límite es el 15.", metodo: "" },
+    { id: "youtube", nombre: "YouTube Premium", detalle: "suscripción", dia: 11, monto: null,
+      fuente: "Aviso de cobro rechazado del 11 ago", critico: true,
+      aviso: "El cobro se rechazó. Actualiza la forma de pago.", metodo: "" },
+    { id: "movistar", nombre: "Movistar", detalle: "plan celular", dia: 17, monto: 281,
+      fuente: "Factura del 4 ago · cuenta 40980855",
+      aviso: "Me dijiste el 15, pero la factura marca límite el 17.", metodo: "" }
+  ];
+
+  var TARJETAS = [
+    { id: "mp", nombre: "Tarjeta Mercado Pago", dia: 16 },
+    { id: "bbva", nombre: "Tarjeta BBVA", dia: 22 }
+  ];
+
+  var METODOS = [
+    { v: "", label: "Sin asignar" },
+    { v: "bbva", label: "BBVA crédito" },
+    { v: "mp", label: "Mercado Pago" },
+    { v: "debito", label: "Débito BBVA" },
+    { v: "otro", label: "Otro" }
+  ];
+
+  var MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  var MES_CORTO = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+
+  var mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
+
+  // ---- estado persistido ----
+  function load(key, def) {
+    try { return JSON.parse(localStorage.getItem("corteypago." + key)) || def; }
+    catch (e) { return def; }
+  }
+  function save(key, val) {
+    try { localStorage.setItem("corteypago." + key, JSON.stringify(val)); } catch (e) {}
+  }
+  var montos = load("montos", {});
+  var metodos = load("metodos", {});
+  var pagados = load("pagados", {});
+
+  SERVICIOS.forEach(function (s) {
+    if (!(s.id in montos)) montos[s.id] = s.monto;
+    if (!(s.id in metodos)) metodos[s.id] = s.metodo || "";
+  });
+
+  var hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  var vista = { y: hoy.getFullYear(), m: hoy.getMonth() };
+  var modo = "cal";
+
+  function mesKey(y, m) { return y + "-" + String(m + 1).padStart(2, "0"); }
+  function pagKey(y, m, id) { return mesKey(y, m) + ":" + id; }
+  function diasMes(y, m) { return new Date(y, m + 1, 0).getDate(); }
+  function clampDia(dia, y, m) { return Math.min(dia, diasMes(y, m)); }
+
+  // Estado de un pago en un mes dado.
+  function estadoDe(dia, y, m, id) {
+    if (pagados[pagKey(y, m, id)]) return "pagado";
+    var f = new Date(y, m, clampDia(dia, y, m));
+    var difDias = Math.round((f - hoy) / 86400000);
+    if (difDias < 0) return "vencido";
+    if (difDias === 0) return "hoy";
+    if (difDias <= 5) return "pronto";
+    return "programado";
+  }
+  var ETIQUETA = { pagado: "Pagado", vencido: "Vencido", hoy: "Hoy", pronto: "Pronto", programado: "Programado" };
+
+  // Todos los eventos (servicios + fechas de tarjeta) del mes en vista, ordenados.
+  function eventosDe(y, m) {
+    var out = [];
+    SERVICIOS.forEach(function (s) {
+      out.push({
+        id: s.id, tipo: "servicio", nombre: s.nombre, detalle: s.detalle,
+        dia: clampDia(s.dia, y, m), monto: montos[s.id],
+        fuente: s.fuente, aviso: s.aviso, critico: s.critico,
+        metodo: metodos[s.id]
+      });
+    });
+    TARJETAS.forEach(function (t) {
+      out.push({
+        id: t.id, tipo: "tarjeta", nombre: t.nombre, detalle: "fecha de pago",
+        dia: clampDia(t.dia, y, m), monto: null,
+        fuente: "Fecha que me diste tú"
+      });
+    });
+    out.sort(function (a, b) { return a.dia - b.dia || (a.tipo === "tarjeta" ? 1 : -1); });
+    return out;
+  }
+
+  // ---- resumen ----
+  function pintarResumen() {
+    var conMonto = SERVICIOS.filter(function (s) { return typeof montos[s.id] === "number" && montos[s.id] > 0; });
+    var total = conMonto.reduce(function (a, s) { return a + montos[s.id]; }, 0);
+    var faltan = SERVICIOS.length - conMonto.length;
+    document.getElementById("t-total").textContent = mxn.format(total);
+    document.getElementById("t-total-foot").textContent =
+      conMonto.length + " de " + SERVICIOS.length + " cargos con monto" + (faltan ? " · faltan " + faltan : "");
+
+    var y = hoy.getFullYear(), m = hoy.getMonth();
+    var pend = SERVICIOS.filter(function (s) {
+      var e = estadoDe(s.dia, y, m, s.id);
+      return e !== "pagado" && e !== "vencido";
+    });
+    var pendTotal = pend.reduce(function (a, s) { return a + (montos[s.id] || 0); }, 0);
+    document.getElementById("t-pend").textContent = mxn.format(pendTotal);
+    document.getElementById("t-pend-foot").textContent = pend.length
+      ? pend.length + " pago" + (pend.length > 1 ? "s" : "") + " por delante en " + MESES[m]
+      : "Nada pendiente en " + MESES[m];
+
+    // Siguiente vencimiento: recorre desde hoy hasta 40 días adelante.
+    var sig = null;
+    for (var d = 0; d <= 40 && !sig; d++) {
+      var f = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + d);
+      eventosDe(f.getFullYear(), f.getMonth()).forEach(function (ev) {
+        if (sig || ev.dia !== f.getDate()) return;
+        if (ev.tipo === "servicio" && pagados[pagKey(f.getFullYear(), f.getMonth(), ev.id)]) return;
+        sig = { ev: ev, f: f, dias: d };
+      });
+    }
+    if (sig) {
+      document.getElementById("t-next").textContent = sig.ev.nombre;
+      document.getElementById("t-next-foot").textContent =
+        (sig.dias === 0 ? "Hoy" : sig.dias === 1 ? "Mañana" : "En " + sig.dias + " días") +
+        " · " + sig.f.getDate() + " de " + MESES[sig.f.getMonth()] +
+        (typeof sig.ev.monto === "number" ? " · " + mxn.format(sig.ev.monto) : "");
+    } else {
+      document.getElementById("t-next").textContent = "—";
+      document.getElementById("t-next-foot").textContent = "Sin vencimientos próximos";
+    }
+  }
+
+  // ---- calendario ----
+  function pintarCalendario() {
+    var y = vista.y, m = vista.m;
+    var grid = document.getElementById("cal-grid");
+    grid.textContent = "";
+
+    var primero = new Date(y, m, 1);
+    var offset = (primero.getDay() + 6) % 7; // lunes = 0
+    var total = diasMes(y, m);
+    var previo = diasMes(y, m - 1 < 0 ? 11 : m - 1);
+    var evs = eventosDe(y, m);
+    var celdas = Math.ceil((offset + total) / 7) * 7;
+
+    for (var i = 0; i < celdas; i++) {
+      var cell = document.createElement("div");
+      cell.className = "cell";
+      var num = i - offset + 1;
+
+      if (num < 1 || num > total) {
+        cell.classList.add("off");
+        var n0 = document.createElement("span");
+        n0.className = "num";
+        n0.textContent = num < 1 ? previo + num : num - total;
+        cell.appendChild(n0);
+        grid.appendChild(cell);
+        continue;
+      }
+
+      var fecha = new Date(y, m, num);
+      if (fecha < hoy) cell.classList.add("past");
+      if (fecha.getTime() === hoy.getTime()) cell.classList.add("hoy");
+
+      var n = document.createElement("span");
+      n.className = "num";
+      n.textContent = num;
+      cell.appendChild(n);
+
+      evs.filter(function (ev) { return ev.dia === num; }).forEach(function (ev) {
+        var chip = document.createElement("div");
+        chip.className = "chip";
+        if (ev.tipo === "tarjeta") chip.classList.add("tarjeta", ev.id);
+        if (ev.critico) chip.classList.add("crit");
+        if (ev.tipo === "servicio" && pagados[pagKey(y, m, ev.id)]) chip.classList.add("pagado");
+
+        var nom = document.createElement("span");
+        nom.textContent = ev.nombre;
+        chip.appendChild(nom);
+
+        var mo = document.createElement("span");
+        mo.className = "m";
+        mo.textContent = typeof ev.monto === "number" ? mxn.format(ev.monto) : "";
+        chip.appendChild(mo);
+
+        chip.title = ev.nombre + " · " + ev.detalle + "\n" + ev.fuente;
+        cell.appendChild(chip);
+      });
+
+      grid.appendChild(cell);
+    }
+  }
+
+  // ---- línea de tiempo ----
+  function pintarLinea() {
+    var y = vista.y, m = vista.m;
+    var body = document.getElementById("lin-body");
+    body.textContent = "";
+
+    eventosDe(y, m).forEach(function (ev) {
+      var row = document.createElement("div");
+      row.className = "row";
+
+      var dia = document.createElement("div");
+      dia.className = "dia";
+      var d = document.createElement("span"); d.className = "d"; d.textContent = ev.dia;
+      var mm = document.createElement("span"); mm.className = "m"; mm.textContent = MES_CORTO[m];
+      dia.appendChild(d); dia.appendChild(mm);
+      row.appendChild(dia);
+
+      var info = document.createElement("div");
+      info.className = "info";
+      var nom = document.createElement("div");
+      nom.className = "nombre";
+      nom.textContent = ev.nombre + " ";
+      var det = document.createElement("span");
+      det.className = "det";
+      det.textContent = "· " + ev.detalle;
+      nom.appendChild(det);
+      info.appendChild(nom);
+
+      if (ev.aviso) {
+        var av = document.createElement("p");
+        av.className = "meta aviso";
+        av.textContent = ev.aviso;
+        info.appendChild(av);
+      }
+      var fu = document.createElement("p");
+      fu.className = "meta";
+      fu.textContent = ev.fuente;
+      info.appendChild(fu);
+      row.appendChild(info);
+
+      var right = document.createElement("div");
+      right.className = "right";
+
+      if (ev.tipo === "servicio") {
+        var input = document.createElement("input");
+        input.type = "number";
+        input.className = "monto-in";
+        input.placeholder = "—";
+        input.setAttribute("aria-label", "Monto de " + ev.nombre);
+        input.value = typeof ev.monto === "number" ? ev.monto : "";
+        input.addEventListener("input", function () {
+          var v = parseFloat(input.value);
+          montos[ev.id] = isNaN(v) ? null : v;
+          save("montos", montos);
+          pintarResumen(); pintarTarjetas();
+          if (modo === "cal") pintarCalendario();
+        });
+        right.appendChild(input);
+
+        var est = estadoDe(ev.dia, y, m, ev.id);
+        if (est === "pagado") row.classList.add("pagado");
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "estado " + est;
+        btn.textContent = ETIQUETA[est];
+        btn.setAttribute("aria-pressed", est === "pagado" ? "true" : "false");
+        btn.title = est === "pagado" ? "Marcar como no pagado" : "Marcar como pagado";
+        btn.addEventListener("click", function () {
+          var k = pagKey(y, m, ev.id);
+          if (pagados[k]) delete pagados[k]; else pagados[k] = true;
+          save("pagados", pagados);
+          pintar();
+        });
+        right.appendChild(btn);
+      } else {
+        var lbl = document.createElement("span");
+        lbl.className = "estado programado";
+        lbl.style.cursor = "default";
+        lbl.textContent = "Corte";
+        right.appendChild(lbl);
+      }
+
+      row.appendChild(right);
+      body.appendChild(row);
+    });
+  }
+
+  // ---- asignación por tarjeta ----
+  function pintarAsignacion() {
+    var cont = document.getElementById("asig");
+    cont.textContent = "";
+    SERVICIOS.forEach(function (s) {
+      var row = document.createElement("div");
+      row.className = "asig-row";
+
+      var izq = document.createElement("div");
+      var nom = document.createElement("strong");
+      nom.textContent = s.nombre;
+      izq.appendChild(nom);
+      if (s.id === "claude") {
+        var h = document.createElement("div");
+        h.className = "hint";
+        h.textContent = "El recibo dice tarjeta ••0939";
+        izq.appendChild(h);
+      }
+      row.appendChild(izq);
+
+      var sel = document.createElement("select");
+      sel.setAttribute("aria-label", "Tarjeta de " + s.nombre);
+      METODOS.forEach(function (o) {
+        var op = document.createElement("option");
+        op.value = o.v;
+        op.textContent = o.label;
+        if (metodos[s.id] === o.v) op.selected = true;
+        sel.appendChild(op);
+      });
+      sel.addEventListener("change", function () {
+        metodos[s.id] = sel.value;
+        save("metodos", metodos);
+        pintarTarjetas();
+      });
+      row.appendChild(sel);
+      cont.appendChild(row);
+    });
+  }
+
+  function pintarTarjetas() {
+    [["bbva", "card-bbva", "tot-bbva"], ["mp", "card-mp", "tot-mp"]].forEach(function (t) {
+      var ul = document.getElementById(t[1]);
+      ul.textContent = "";
+      var suma = 0, n = 0;
+      SERVICIOS.forEach(function (s) {
+        if (metodos[s.id] !== t[0]) return;
+        n++;
+        var li = document.createElement("li");
+        var a = document.createElement("span");
+        a.textContent = s.nombre;
+        var b = document.createElement("span");
+        b.textContent = typeof montos[s.id] === "number" ? mxn.format(montos[s.id]) : "sin monto";
+        if (typeof montos[s.id] === "number") suma += montos[s.id];
+        li.appendChild(a); li.appendChild(b);
+        ul.appendChild(li);
+      });
+      if (!n) {
+        var vacio = document.createElement("li");
+        vacio.className = "vacio";
+        vacio.textContent = "Todavía no le asignas ningún cargo fijo.";
+        ul.appendChild(vacio);
+      }
+      document.getElementById(t[2]).textContent = mxn.format(suma);
+    });
+  }
+
+  function pintar() {
+    document.getElementById("mes-label").textContent = MESES[vista.m] + " " + vista.y;
+    pintarResumen();
+    if (modo === "cal") pintarCalendario(); else pintarLinea();
+    pintarTarjetas();
+  }
+
+  // ---- controles ----
+  document.getElementById("v-cal").addEventListener("click", function () {
+    modo = "cal";
+    this.setAttribute("aria-pressed", "true");
+    document.getElementById("v-lin").setAttribute("aria-pressed", "false");
+    document.getElementById("panel-cal").hidden = false;
+    document.getElementById("panel-lin").hidden = true;
+    pintar();
+  });
+  document.getElementById("v-lin").addEventListener("click", function () {
+    modo = "lin";
+    this.setAttribute("aria-pressed", "true");
+    document.getElementById("v-cal").setAttribute("aria-pressed", "false");
+    document.getElementById("panel-lin").hidden = false;
+    document.getElementById("panel-cal").hidden = true;
+    pintar();
+  });
+  document.getElementById("prev").addEventListener("click", function () {
+    vista.m--; if (vista.m < 0) { vista.m = 11; vista.y--; }
+    pintar();
+  });
+  document.getElementById("next").addEventListener("click", function () {
+    vista.m++; if (vista.m > 11) { vista.m = 0; vista.y++; }
+    pintar();
+  });
+  document.getElementById("hoy-btn").addEventListener("click", function () {
+    vista = { y: hoy.getFullYear(), m: hoy.getMonth() };
+    pintar();
+  });
+
+  pintarAsignacion();
+  pintar();
+})();
+</script>
