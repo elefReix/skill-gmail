@@ -455,6 +455,9 @@
 
   // dia/monto/periodo/mes son valores por default; el usuario los puede cambiar y se guardan.
   var SERVICIOS = [
+    { id: "semanal2k", nombre: "Gasto semanal", detalle: "fijo de cada semana", periodo: "semanal", diaSem: 0, dia: null, monto: 2000,
+      fuente: "Me lo dijiste tú",
+      aviso: "Lo puse en lunes. En tu correo hay transferencias BBVA de $2,000 recurrentes, pero en días irregulares — cambia el día si no es lunes." },
     { id: "claude", nombre: "Claude Pro", detalle: "suscripción", periodo: "mensual", dia: 1, monto: 349,
       fuente: "Recibo de Anthropic del 31 jul · tarjeta ••0939" },
     { id: "totalplay", nombre: "Totalplay", detalle: "internet 150 Mbps", periodo: "mensual", dia: 11, monto: 408,
@@ -499,11 +502,14 @@
     { v: "otro", label: "Otro" }
   ];
 
+  // divisor = cada cuántos meses ocurre. Semanal: 12/52 de mes.
   var PERIODOS = [
+    { v: "semanal", label: "Semana", corto: "SEM", divisor: 12 / 52 },
     { v: "mensual", label: "Mes", corto: "", divisor: 1 },
     { v: "bimestral", label: "2 meses", corto: "2M", divisor: 2 },
     { v: "anual", label: "Año", corto: "AÑO", divisor: 12 }
   ];
+  var DIAS_SEM = ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"];
   function periodoDe(v) {
     for (var i = 0; i < PERIODOS.length; i++) if (PERIODOS[i].v === v) return PERIODOS[i];
     return PERIODOS[0];
@@ -527,6 +533,7 @@
   var dias = load("dias", {});
   var periodos = load("periodos", {});
   var mesesAncla = load("meses", {});
+  var diasSem = load("diasSem", {});
 
   SERVICIOS.forEach(function (s) {
     if (!(s.id in montos)) montos[s.id] = s.monto;
@@ -534,6 +541,7 @@
     if (!(s.id in dias)) dias[s.id] = s.dia;
     if (!(s.id in periodos)) periodos[s.id] = s.periodo;
     if (!(s.id in mesesAncla)) mesesAncla[s.id] = typeof s.mes === "number" ? s.mes : null;
+    if (!(s.id in diasSem)) diasSem[s.id] = typeof s.diaSem === "number" ? s.diaSem : 0;
   });
 
   var hoy = new Date();
@@ -542,13 +550,19 @@
   var modo = "cal";
 
   function mesKey(y, m) { return y + "-" + String(m + 1).padStart(2, "0"); }
-  function pagKey(y, m, id) { return mesKey(y, m) + ":" + id; }
+  // Lo semanal cae varias veces al mes, así que su marca de pagado lleva el día.
+  function pagKey(y, m, id, dia) {
+    return periodos[id] === "semanal"
+      ? mesKey(y, m) + "-" + dia + ":" + id
+      : mesKey(y, m) + ":" + id;
+  }
   function diasMes(y, m) { return new Date(y, m + 1, 0).getDate(); }
   function clampDia(d, y, m) { return Math.max(1, Math.min(d, diasMes(y, m))); }
 
   // ¿Este cargo cae en el mes (y, m)?
   function caeEn(id, m) {
     var p = periodos[id];
+    if (p === "semanal") return true;
     if (dias[id] == null) return false;
     if (p === "mensual") return true;
     var ancla = mesesAncla[id];
@@ -557,8 +571,18 @@
     return ((m - ancla) % 2 + 2) % 2 === 0; // bimestral
   }
 
+  // Todos los días del mes que caen en el día de la semana elegido.
+  function diasSemanalesDe(id, y, m) {
+    var objetivo = diasSem[id] || 0; // 0 = lunes
+    var out = [], total = diasMes(y, m);
+    for (var d = 1; d <= total; d++) {
+      if ((new Date(y, m, d).getDay() + 6) % 7 === objetivo) out.push(d);
+    }
+    return out;
+  }
+
   function estadoDe(dia, y, m, id) {
-    if (pagados[pagKey(y, m, id)]) return "pagado";
+    if (pagados[pagKey(y, m, id, dia)]) return "pagado";
     var difDias = Math.round((new Date(y, m, clampDia(dia, y, m)) - hoy) / 86400000);
     if (difDias < 0) return "vencido";
     if (difDias === 0) return "hoy";
@@ -571,12 +595,18 @@
     var out = [];
     SERVICIOS.forEach(function (s) {
       if (!caeEn(s.id, m)) return;
-      out.push({
+      var base = {
         id: s.id, tipo: "servicio", nombre: s.nombre, detalle: s.detalle,
-        dia: clampDia(dias[s.id], y, m), monto: montos[s.id],
-        fuente: s.fuente, aviso: s.aviso, critico: s.critico,
+        monto: montos[s.id], fuente: s.fuente, aviso: s.aviso, critico: s.critico,
         periodo: periodos[s.id]
-      });
+      };
+      if (periodos[s.id] === "semanal") {
+        diasSemanalesDe(s.id, y, m).forEach(function (d) {
+          out.push(Object.assign({}, base, { dia: d }));
+        });
+      } else {
+        out.push(Object.assign({}, base, { dia: clampDia(dias[s.id], y, m) }));
+      }
     });
     TARJETAS.forEach(function (t) {
       out.push({
@@ -608,19 +638,19 @@
 
     document.getElementById("t-prorrateo").textContent = mxn.format(Math.round(prorrateo));
     document.getElementById("t-prorrateo-foot").textContent =
-      "Mensual + bimestral entre 2 + anual entre 12" + (sinMonto ? " · faltan " + sinMonto + " montos" : "");
+      "Semanal ×4.33, bimestral ÷2, anual ÷12" + (sinMonto ? " · faltan " + sinMonto + " montos" : "");
 
     document.getElementById("t-mensual").textContent = mxn.format(mensual);
     document.getElementById("t-mensual-foot").textContent =
       conMonto + " de " + SERVICIOS.length + " cargos con monto · " + noMensuales + " no son mensuales";
 
     var y = hoy.getFullYear(), m = hoy.getMonth();
-    var pend = SERVICIOS.filter(function (s) {
-      if (!caeEn(s.id, m)) return false;
-      var e = estadoDe(dias[s.id], y, m, s.id);
+    var pend = eventosDe(y, m).filter(function (ev) {
+      if (ev.tipo !== "servicio") return false;
+      var e = estadoDe(ev.dia, y, m, ev.id);
       return e !== "pagado" && e !== "vencido";
     });
-    var pendTotal = pend.reduce(function (a, s) { return a + (montos[s.id] || 0); }, 0);
+    var pendTotal = pend.reduce(function (a, ev) { return a + (ev.monto || 0); }, 0);
     document.getElementById("t-pend").textContent = mxn.format(pendTotal);
     document.getElementById("t-pend-foot").textContent = pend.length
       ? pend.length + " pago" + (pend.length > 1 ? "s" : "") + " por delante en " + MESES[m]
@@ -631,7 +661,7 @@
       var f = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + d);
       eventosDe(f.getFullYear(), f.getMonth()).forEach(function (ev) {
         if (sig || ev.dia !== f.getDate()) return;
-        if (ev.tipo === "servicio" && pagados[pagKey(f.getFullYear(), f.getMonth(), ev.id)]) return;
+        if (ev.tipo === "servicio" && pagados[pagKey(f.getFullYear(), f.getMonth(), ev.id, ev.dia)]) return;
         sig = { ev: ev, f: f, dias: d };
       });
     }
@@ -688,7 +718,7 @@
         chip.className = "chip";
         if (ev.tipo === "tarjeta") chip.classList.add("tarjeta", ev.id);
         if (ev.critico) chip.classList.add("crit");
-        if (ev.tipo === "servicio" && pagados[pagKey(y, m, ev.id)]) chip.classList.add("pagado");
+        if (ev.tipo === "servicio" && pagados[pagKey(y, m, ev.id, ev.dia)]) chip.classList.add("pagado");
 
         var nom = document.createElement("span");
         nom.className = "nm";
@@ -749,7 +779,9 @@
       var det = document.createElement("span");
       det.className = "det";
       det.textContent = "· " + ev.detalle +
-        (ev.periodo === "bimestral" ? " · cada 2 meses" : ev.periodo === "anual" ? " · una vez al año" : "");
+        (ev.periodo === "semanal" ? " · cada semana" :
+         ev.periodo === "bimestral" ? " · cada 2 meses" :
+         ev.periodo === "anual" ? " · una vez al año" : "");
       nom.appendChild(det);
       info.appendChild(nom);
 
@@ -783,7 +815,7 @@
         btn.setAttribute("aria-pressed", est === "pagado" ? "true" : "false");
         btn.title = est === "pagado" ? "Marcar como no pagado" : "Marcar como pagado";
         btn.addEventListener("click", function () {
-          var k = pagKey(y, m, ev.id);
+          var k = pagKey(y, m, ev.id, ev.dia);
           if (pagados[k]) delete pagados[k]; else pagados[k] = true;
           save("pagados", pagados);
           pintar();
@@ -845,7 +877,14 @@
       inDia.type = "number"; inDia.className = "num"; inDia.min = "1"; inDia.max = "31";
       inDia.placeholder = "—";
       inDia.setAttribute("aria-label", "Día de pago de " + s.nombre);
-      inDia.value = dias[s.id] == null ? "" : dias[s.id];
+      if (periodos[s.id] === "semanal") {
+        inDia.disabled = true;
+        inDia.placeholder = "sem";
+        inDia.title = "Lo semanal se fija por día de la semana, no por día del mes.";
+        inDia.value = "";
+      } else {
+        inDia.value = dias[s.id] == null ? "" : dias[s.id];
+      }
       inDia.addEventListener("input", function () {
         var v = parseInt(inDia.value, 10);
         dias[s.id] = isNaN(v) ? null : Math.max(1, Math.min(31, v));
@@ -857,7 +896,7 @@
       // periodicidad
       row.appendChild(selectDe(PERIODOS, periodos[s.id], "Cada cuánto se paga " + s.nombre, function (v) {
         periodos[s.id] = v;
-        if (v !== "mensual" && mesesAncla[s.id] == null) mesesAncla[s.id] = hoy.getMonth();
+        if (v !== "mensual" && v !== "semanal" && mesesAncla[s.id] == null) mesesAncla[s.id] = hoy.getMonth();
         save("periodos", periodos);
         save("meses", mesesAncla);
         pintarEditor();
@@ -885,8 +924,27 @@
       });
       row.appendChild(inMonto);
 
-      // mes ancla para bimestral / anual
-      if (periodos[s.id] !== "mensual") {
+      // día de la semana (semanal) o mes ancla (bimestral / anual)
+      if (periodos[s.id] === "semanal") {
+        var extraS = document.createElement("div");
+        extraS.className = "ed-mes";
+        var labS = document.createElement("label");
+        labS.textContent = "Cae en";
+        var idSem = "sem-" + s.id;
+        labS.setAttribute("for", idSem);
+        extraS.appendChild(labS);
+        var selSem = selectDe(
+          DIAS_SEM.map(function (nombre, i) { return { v: i, label: nombre }; }),
+          diasSem[s.id], "Día de la semana de " + s.nombre,
+          function (v) {
+            diasSem[s.id] = parseInt(v, 10);
+            save("diasSem", diasSem);
+            pintar();
+          });
+        selSem.id = idSem;
+        extraS.appendChild(selSem);
+        row.appendChild(extraS);
+      } else if (periodos[s.id] !== "mensual") {
         var extra = document.createElement("div");
         extra.className = "ed-mes";
         var lab = document.createElement("label");
@@ -920,7 +978,10 @@
         n++;
         var li = document.createElement("li");
         var a = document.createElement("span");
-        a.textContent = s.nombre + (periodos[s.id] === "mensual" ? "" : periodos[s.id] === "anual" ? " (anual)" : " (bimestral)");
+        a.textContent = s.nombre + (
+          periodos[s.id] === "mensual" ? "" :
+          periodos[s.id] === "semanal" ? " (semanal)" :
+          periodos[s.id] === "anual" ? " (anual)" : " (bimestral)");
         var b = document.createElement("span");
         b.className = "cif";
         b.textContent = typeof montos[s.id] === "number" ? mxn.format(montos[s.id]) : "sin monto";
