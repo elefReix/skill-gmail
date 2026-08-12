@@ -455,9 +455,9 @@
 
   // dia/monto/periodo/mes son valores por default; el usuario los puede cambiar y se guardan.
   var SERVICIOS = [
-    { id: "semanal2k", nombre: "Gasto semanal", detalle: "fijo de cada semana", periodo: "semanal", diaSem: 0, dia: null, monto: 2000,
+    { id: "semanal2k", nombre: "Gasto semanal", detalle: "fijo de cada semana", periodo: "semanal", diaSem: 4, dia: null, monto: 2000,
       fuente: "Me lo dijiste tú",
-      aviso: "Lo puse en lunes. En tu correo hay transferencias BBVA de $2,000 recurrentes, pero en días irregulares — cambia el día si no es lunes." },
+      aviso: "Cae en viernes. En tu correo hay transferencias BBVA de $2,000 recurrentes, pero en días irregulares." },
     { id: "claude", nombre: "Claude Pro", detalle: "suscripción", periodo: "mensual", dia: 1, monto: 349,
       fuente: "Recibo de Anthropic del 31 jul · tarjeta ••0939" },
     { id: "totalplay", nombre: "Totalplay", detalle: "internet 150 Mbps", periodo: "mensual", dia: 11, monto: 408,
@@ -543,6 +543,14 @@
     if (!(s.id in mesesAncla)) mesesAncla[s.id] = typeof s.mes === "number" ? s.mes : null;
     if (!(s.id in diasSem)) diasSem[s.id] = typeof s.diaSem === "number" ? s.diaSem : 0;
   });
+
+  // El gasto semanal salió a lunes en la primera versión; ahora va en viernes.
+  // Migra el valor ya guardado sin tocar el resto de tus cambios.
+  if (load("v", 1) < 2) {
+    diasSem.semanal2k = 4;
+    save("diasSem", diasSem);
+    save("v", 2);
+  }
 
   var hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
