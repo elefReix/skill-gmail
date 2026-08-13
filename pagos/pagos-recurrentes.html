@@ -284,6 +284,46 @@
   }
   .card .total strong { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 600; }
 
+  /* nómina */
+  .tile .val.ingreso { color: var(--accent); }
+  .nom { display: grid; grid-template-columns: 1fr 1fr; }
+  .nom-col { padding: 14px 16px; }
+  .nom-col + .nom-col { border-left: 1px solid var(--line); }
+  .nom-tit {
+    font-size: 11px; font-weight: 600; letter-spacing: .11em; text-transform: uppercase;
+    color: var(--ink-3); margin-bottom: 7px;
+  }
+  .nom-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .nom-col li { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; }
+  .nom-col li .c { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-2); flex: none; }
+  .nom-col li.marcado { color: var(--crit); font-weight: 600; }
+  .nom-col li.marcado .c { color: var(--crit); }
+  .nom-sum {
+    display: flex; justify-content: space-between; gap: 12px; font-size: 13px;
+    margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--line);
+  }
+  .nom-sum strong { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .nom-neto {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    padding: 13px 16px; border-top: 1px solid var(--line); background: var(--surface-2);
+  }
+  .nom-nota { font-size: 12px; color: var(--ink-3); }
+  .nom-neto-cifra { display: flex; align-items: baseline; gap: 2px; color: var(--accent); }
+  .nom-neto-cifra .signo { font-family: var(--mono); font-size: 20px; }
+  .nom-neto-cifra input {
+    font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 24px; letter-spacing: -.02em;
+    width: 7.5ch; text-align: right; color: var(--accent);
+    background: transparent; border: 0; border-bottom: 1px dashed var(--line-strong); padding: 0;
+  }
+  .panel.infonavit { border-color: color-mix(in srgb, var(--crit) 35%, var(--line)); }
+  .info-box { padding: 14px 16px; display: flex; flex-direction: column; gap: 5px; }
+  .info-cifra { font-size: 15px; }
+  .info-cifra strong, .info-cifra span {
+    font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--crit);
+  }
+  .info-txt { font-size: 13px; color: var(--ink-2); max-width: 74ch; }
+  .info-txt.sub { color: var(--ink-3); font-size: 12.5px; }
+
   /* pendientes */
   .pend-row {
     display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
@@ -309,6 +349,8 @@
     .ed-head { display: none; }
     .ed-row { grid-template-columns: 1fr 1fr; row-gap: 8px; }
     .ed-row .nm-wrap { grid-column: 1 / -1; }
+    .nom { grid-template-columns: 1fr; }
+    .nom-col + .nom-col { border-left: 0; border-top: 1px solid var(--line); }
   }
 </style>
 
@@ -329,20 +371,20 @@
   </div>
 
   <div class="tiles">
-    <div class="tile destaca">
-      <p class="eyebrow">Costo real por mes</p>
+    <div class="tile">
+      <p class="eyebrow">Entra al mes</p>
+      <p class="val ingreso" id="t-ingreso">—</p>
+      <p class="foot" id="t-ingreso-foot">—</p>
+    </div>
+    <div class="tile">
+      <p class="eyebrow">Sale al mes</p>
       <p class="val" id="t-prorrateo">—</p>
       <p class="foot" id="t-prorrateo-foot">—</p>
     </div>
-    <div class="tile">
-      <p class="eyebrow">Solo lo mensual</p>
-      <p class="val" id="t-mensual">—</p>
-      <p class="foot" id="t-mensual-foot">—</p>
-    </div>
-    <div class="tile">
-      <p class="eyebrow">Falta pagar este mes</p>
-      <p class="val" id="t-pend">—</p>
-      <p class="foot" id="t-pend-foot">—</p>
+    <div class="tile destaca">
+      <p class="eyebrow">Te queda</p>
+      <p class="val" id="t-queda">—</p>
+      <p class="foot" id="t-queda-foot">—</p>
     </div>
     <div class="tile">
       <p class="eyebrow">Siguiente vencimiento</p>
@@ -378,7 +420,7 @@
   <section class="panel" id="panel-lin" hidden>
     <div class="phead">
       <h2>Orden de vencimiento</h2>
-      <p class="eyebrow">Toca el estado para marcar pagado</p>
+      <p class="eyebrow" id="pend-nota">—</p>
     </div>
     <div id="lin-body"></div>
   </section>
@@ -391,6 +433,43 @@
         <span>Cargo</span><span>Día</span><span>Cada</span><span>Tarjeta</span><span>Monto</span>
       </div>
       <div id="editor"></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Tu nómina</h2>
+    <p class="lead">Semana 33049, del 30 de julio al 5 de agosto de 2026, pagada el viernes 7. Servicios Industriales de Reciclaje. Los bonos de asistencia y puntualidad cambian semana con semana, así que el neto no siempre es idéntico.</p>
+    <div class="panel">
+      <div class="nom">
+        <div class="nom-col">
+          <p class="nom-tit">Percepciones</p>
+          <ul id="nom-perc"></ul>
+          <div class="nom-sum"><span>Total</span><strong id="nom-perc-tot">—</strong></div>
+        </div>
+        <div class="nom-col">
+          <p class="nom-tit">Deducciones</p>
+          <ul id="nom-ded"></ul>
+          <div class="nom-sum"><span>Total</span><strong id="nom-ded-tot">—</strong></div>
+        </div>
+      </div>
+      <div class="nom-neto">
+        <div>
+          <p class="eyebrow">Neto que recibes cada semana</p>
+          <p class="nom-nota">Editable, por si cambia tu sueldo.</p>
+        </div>
+        <div class="nom-neto-cifra">
+          <span class="signo">$</span>
+          <input type="number" id="in-neto" class="num" min="0" step="1" aria-label="Neto semanal de tu nómina">
+        </div>
+      </div>
+    </div>
+    <div class="panel infonavit">
+      <div class="info-box">
+        <p class="eyebrow">Crédito Infonavit</p>
+        <p class="info-cifra"><strong id="info-sem">—</strong> por semana · <span id="info-mes">—</span> al mes</p>
+        <p class="info-txt">Tu patrón lo retiene directo de la nómina, antes de que el dinero te llegue. Por eso no aparece en la lista de cargos ni en ninguna tarjeta: descontarlo otra vez sería contarlo doble. El neto de arriba ya lo trae restado.</p>
+        <p class="info-txt sub" id="info-peso">—</p>
+      </div>
     </div>
   </section>
 
@@ -436,15 +515,11 @@
         <div><strong>Apple TV</strong> <span class="meta">· venció en junio</span></div>
         <p class="por-que">Venía incluida con tu plan de Mercado Libre y ya expiró. Hoy no te cobra.</p>
       </div>
-      <div class="pend-row">
-        <div><strong>Infonavit</strong> <span class="meta">· estado de cuenta del 25 de junio</span></div>
-        <p class="por-que">No me lo pediste, pero si te descuentan crédito Infonavit, es el cargo fijo más grande que no está en esta lista.</p>
-      </div>
     </div>
   </section>
 
   <footer>
-    <p><strong>Con comprobante en tu correo:</strong> Totalplay, Movistar, Claude Pro, YouTube, Uber One, CFE, CESPT y el refrendo de placas. Fechas y montos salieron de correos entre abril de 2025 y agosto de 2026.</p>
+    <p><strong>Con comprobante:</strong> Totalplay, Movistar, Claude Pro, YouTube, Uber One, CFE, CESPT y el refrendo de placas salieron de correos tuyos entre abril de 2025 y agosto de 2026. La nómina y el Infonavit vienen de tu CFDI de la semana 33049, folio fiscal 058B4661.</p>
     <p><strong>Sin comprobante:</strong> el seguro del auto y Meli no aparecen en ningún correo tuyo — quedaron como filas vacías para que las llenes. Las fechas de la Mercado Pago (16) y la BBVA (22) me las diste tú: no llegan estados de cuenta de Mercado Pago a esta cuenta y los de BBVA vienen protegidos con contraseña. Los montos de CFE y CESPT solo vienen dentro del PDF adjunto, no en el cuerpo del correo.</p>
   </footer>
 </div>
@@ -494,6 +569,29 @@
     { id: "bbva", nombre: "Tarjeta BBVA", dia: 22 }
   ];
 
+  // Recibo de nómina semanal 33049 (30 jul – 5 ago 2026), pagado el viernes 7 de agosto.
+  var NOMINA = {
+    netoSemanal: 9572.00,
+    infonavitSemanal: 3818.60,
+    percepciones: [
+      { c: "Sueldo ordinario", v: 13002.00 },
+      { c: "Séptimo día", v: 2167.00 },
+      { c: "Bono por asistencia", v: 1516.90 },
+      { c: "Bono de puntualidad", v: 1516.90 },
+      { c: "Fondo de ahorro empresa", v: 589.00 },
+      { c: "Despensa", v: 328.47 }
+    ],
+    deducciones: [
+      { c: "ISR", v: 4117.03 },
+      { c: "IMSS", v: 434.74 },
+      { c: "Crédito Infonavit", v: 3818.60, marcado: true },
+      { c: "Fondo de ahorro empleado", v: 589.00 },
+      { c: "Fondo de ahorro empresa", v: 589.00 },
+      { c: "Ajuste por diferencia moneda", v: -0.10 }
+    ]
+  };
+  var SEMANAS_MES = 52 / 12;
+
   var METODOS = [
     { v: "", label: "Sin asignar" },
     { v: "bbva", label: "BBVA crédito" },
@@ -534,6 +632,7 @@
   var periodos = load("periodos", {});
   var mesesAncla = load("meses", {});
   var diasSem = load("diasSem", {});
+  var netoSemanal = load("neto", NOMINA.netoSemanal);
 
   SERVICIOS.forEach(function (s) {
     if (!(s.id in montos)) montos[s.id] = s.monto;
@@ -644,13 +743,22 @@
       else noMensuales++;
     });
 
+    var ingresoMes = netoSemanal * SEMANAS_MES;
+    var queda = ingresoMes - prorrateo;
+
+    document.getElementById("t-ingreso").textContent = mxn.format(Math.round(ingresoMes));
+    document.getElementById("t-ingreso-foot").textContent =
+      mxn.format(netoSemanal) + " neto cada semana, ya sin Infonavit";
+
     document.getElementById("t-prorrateo").textContent = mxn.format(Math.round(prorrateo));
     document.getElementById("t-prorrateo-foot").textContent =
       "Semanal ×4.33, bimestral ÷2, anual ÷12" + (sinMonto ? " · faltan " + sinMonto + " montos" : "");
 
-    document.getElementById("t-mensual").textContent = mxn.format(mensual);
-    document.getElementById("t-mensual-foot").textContent =
-      conMonto + " de " + SERVICIOS.length + " cargos con monto · " + noMensuales + " no son mensuales";
+    document.getElementById("t-queda").textContent = mxn.format(Math.round(queda));
+    document.getElementById("t-queda-foot").textContent = ingresoMes > 0
+      ? Math.round(prorrateo / ingresoMes * 100) + "% de tu ingreso se va en fijos" +
+        (sinMonto ? " (y faltan montos)" : "")
+      : "Pon tu neto semanal abajo";
 
     var y = hoy.getFullYear(), m = hoy.getMonth();
     var pend = eventosDe(y, m).filter(function (ev) {
@@ -659,9 +767,8 @@
       return e !== "pagado" && e !== "vencido";
     });
     var pendTotal = pend.reduce(function (a, ev) { return a + (ev.monto || 0); }, 0);
-    document.getElementById("t-pend").textContent = mxn.format(pendTotal);
-    document.getElementById("t-pend-foot").textContent = pend.length
-      ? pend.length + " pago" + (pend.length > 1 ? "s" : "") + " por delante en " + MESES[m]
+    document.getElementById("pend-nota").textContent = pend.length
+      ? "Faltan " + mxn.format(pendTotal) + " en " + MESES[m] + " · toca el estado para marcar pagado"
       : "Nada pendiente en " + MESES[m];
 
     var sig = null;
@@ -1007,8 +1114,51 @@
     });
   }
 
+  // ---------- nómina ----------
+  function pintarNomina() {
+    [["nom-perc", NOMINA.percepciones, "nom-perc-tot"],
+     ["nom-ded", NOMINA.deducciones, "nom-ded-tot"]].forEach(function (bloque) {
+      var ul = document.getElementById(bloque[0]);
+      ul.textContent = "";
+      var suma = 0;
+      bloque[1].forEach(function (l) {
+        var li = document.createElement("li");
+        if (l.marcado) li.className = "marcado";
+        var a = document.createElement("span");
+        a.textContent = l.c;
+        var b = document.createElement("span");
+        b.className = "c";
+        b.textContent = mxn.format(l.v);
+        li.appendChild(a); li.appendChild(b);
+        ul.appendChild(li);
+        suma += l.v;
+      });
+      document.getElementById(bloque[2]).textContent = mxn.format(suma);
+    });
+
+    var inNeto = document.getElementById("in-neto");
+    if (document.activeElement !== inNeto) inNeto.value = netoSemanal;
+
+    var infoMes = NOMINA.infonavitSemanal * SEMANAS_MES;
+    document.getElementById("info-sem").textContent = mxn.format(NOMINA.infonavitSemanal);
+    document.getElementById("info-mes").textContent = mxn.format(Math.round(infoMes));
+
+    var bruto = NOMINA.percepciones.reduce(function (a, l) { return a + l.v; }, 0);
+    document.getElementById("info-peso").textContent =
+      "Se lleva el " + Math.round(NOMINA.infonavitSemanal / bruto * 100) +
+      "% de tu percepción bruta y es la deducción más grande de tu recibo, arriba del ISR.";
+  }
+
+  document.getElementById("in-neto").addEventListener("input", function () {
+    var v = parseFloat(this.value);
+    netoSemanal = isNaN(v) ? 0 : v;
+    save("neto", netoSemanal);
+    pintarResumen();
+  });
+
   function pintar() {
     document.getElementById("mes-label").textContent = MESES[vista.m] + " " + vista.y;
+    pintarNomina();
     pintarResumen();
     if (modo === "cal") pintarCalendario(); else pintarLinea();
     pintarTarjetas();
