@@ -424,7 +424,8 @@
       { id: "p1", nombre: "Totalplay", nota: "Internet · cuenta 0141299096" },
       { id: "p2", nombre: "Movistar", nota: "Celular · cuenta 40980855" },
       { id: "p3", nombre: "CFE", nota: "Luz · RPU 003250414888" },
-      { id: "p4", nombre: "CESPT", nota: "Agua · cuenta 8819856" }
+      { id: "p4", nombre: "CESPT", nota: "Agua · cuenta 8819856" },
+      { id: "p5", nombre: "Kia Innova", nota: "Agencia · servicio del Kia AVN545A" }
     ],
     tarjetas: [
       { id: "t1", nombre: "BBVA crédito", dia: 22 },
@@ -443,21 +444,61 @@
       { id: "c7", nombre: "Transporte", tipo: "salida" },
       { id: "c8", nombre: "Impuestos y trámites", tipo: "salida" },
       { id: "c9", nombre: "Mantenimiento", tipo: "salida" },
+      { id: "c12", nombre: "Servicio del carro", tipo: "salida" },
       { id: "c11", nombre: "Préstamos y devoluciones", tipo: "ambas" },
       { id: "c10", nombre: "Otros", tipo: "ambas" }
     ],
-    movs: []
+    movs: [
+      {
+        id: "m-kia-2026-08", tipo: "salida", fecha: "2026-08-16",
+        concepto: "Servicio del carro", contraparte: "p5", categoria: "c12",
+        medio: "", monto: 7800
+      }
+    ]
   };
+
+  var VERSION = 2;
+
+  /**
+   * Los datos viven en el navegador, así que agregar algo al SEED no le llega
+   * a quien ya tiene su copia guardada. Estas migraciones inyectan lo nuevo
+   * en una base existente sin tocar lo que el usuario ya capturó.
+   */
+  function migrar(db) {
+    if ((db.v || 1) < 2) {
+      var falta = function (lista, id) {
+        return !lista.some(function (x) { return x.id === id; });
+      };
+      if (falta(db.categorias, "c12")) {
+        db.categorias.push({ id: "c12", nombre: "Servicio del carro", tipo: "salida" });
+      }
+      if (falta(db.proveedores, "p5")) {
+        db.proveedores.push({ id: "p5", nombre: "Kia Innova", nota: "Agencia · servicio del Kia AVN545A" });
+      }
+      if (falta(db.movs, "m-kia-2026-08")) {
+        db.movs.push({
+          id: "m-kia-2026-08", tipo: "salida", fecha: "2026-08-16",
+          concepto: "Servicio del carro", contraparte: "p5", categoria: "c12",
+          medio: "", monto: 7800
+        });
+      }
+    }
+    db.v = VERSION;
+    return db;
+  }
 
   var DB;
   try {
     DB = JSON.parse(localStorage.getItem("caja.db")) || null;
   } catch (e) { DB = null; }
   if (!DB || !DB.categorias) DB = JSON.parse(JSON.stringify(SEED));
+  DB = migrar(DB);
 
   function guardar() {
     try { localStorage.setItem("caja.db", JSON.stringify(DB)); } catch (e) {}
   }
+  guardar();
+
   function uid() { return "x" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function nombreDe(lista, id) {
     for (var i = 0; i < lista.length; i++) if (lista[i].id === id) return lista[i].nombre;
