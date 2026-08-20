@@ -241,6 +241,7 @@
       <button type="button" role="tab" data-vista="resumen" aria-selected="true">Resumen</button>
       <button type="button" role="tab" data-vista="entradas" aria-selected="false">Entradas</button>
       <button type="button" role="tab" data-vista="salidas" aria-selected="false">Salidas</button>
+      <button type="button" role="tab" data-vista="efectivo" aria-selected="false">Efectivo</button>
       <button type="button" role="tab" data-vista="catalogo" aria-selected="false">Catálogo</button>
     </nav>
 
@@ -368,6 +369,57 @@
         </div>
       </section>
 
+      <!-- ============ EFECTIVO ============ -->
+      <section id="v-efectivo" hidden>
+        <div class="tiles">
+          <div class="tile">
+            <p class="k">Dispuesto</p>
+            <p class="v" id="ef-disp">—</p>
+            <p class="s" id="ef-disp-s">—</p>
+          </div>
+          <div class="tile">
+            <p class="k">Comprobado</p>
+            <p class="v sal" id="ef-comp">—</p>
+            <p class="s" id="ef-comp-s">—</p>
+          </div>
+          <div class="tile destaca">
+            <p class="k">Sin comprobar</p>
+            <p class="v" id="ef-falta">—</p>
+            <p class="s" id="ef-falta-s">—</p>
+          </div>
+        </div>
+
+        <div class="box" style="margin-top:16px">
+          <h2>Qué tanto del efectivo ya justificaste<span class="hint" id="ef-hint">—</span></h2>
+          <div class="meter">
+            <div class="bar" id="ef-bar"></div>
+            <span class="pct" id="ef-pct">—</span>
+          </div>
+          <p class="aviso">Un retiro no es un gasto: sacar dinero de tu cuenta solo lo cambia de lugar. Por eso las disposiciones no suman en Salidas — se gastan cuando registras la compra en efectivo. Si contaran las dos, cada billete saldría doble.</p>
+        </div>
+
+        <div class="box" style="margin-top:16px">
+          <h2>Registrar disposición</h2>
+          <form class="form" id="f-ef">
+            <label class="f"><span>Fecha</span><input type="date" name="fecha" required></label>
+            <label class="f"><span>Salió de</span><select name="origen"></select></label>
+            <label class="f ancho"><span>Nota</span><input name="nota" placeholder="Cajero, ventanilla, para qué…"></label>
+            <label class="f"><span>Monto</span><input type="number" name="monto" min="0" step="0.01" placeholder="0.00" required></label>
+            <div class="acciones"><button type="submit" class="btn">+ Agregar</button></div>
+          </form>
+        </div>
+
+        <div class="box" style="margin-top:16px">
+          <h2>Disposiciones del periodo<span class="hint" id="ef-disp-hint">—</span></h2>
+          <div class="tabla-wrap"><table id="t-ef"></table></div>
+        </div>
+
+        <div class="box" style="margin-top:16px">
+          <h2>Gastos que lo respaldan<span class="hint">salidas pagadas en efectivo</span></h2>
+          <div class="rows" id="ef-gastos"></div>
+        </div>
+      </section>
+
       <!-- ============ CATÁLOGO ============ -->
       <section id="v-catalogo" hidden>
         <div class="box">
@@ -431,7 +483,7 @@
       { id: "t1", nombre: "BBVA crédito", dia: 22 },
       { id: "t2", nombre: "Mercado Pago", dia: 16 },
       { id: "t3", nombre: "Débito BBVA", dia: null },
-      { id: "t4", nombre: "Efectivo", dia: null }
+      { id: "t4", nombre: "Efectivo", dia: null, efectivo: true }
     ],
     categorias: [
       { id: "c0", nombre: "Sueldo / nómina", tipo: "entrada" },
@@ -454,10 +506,16 @@
         concepto: "Servicio del carro", contraparte: "p5", categoria: "c12",
         medio: "", monto: 7800
       }
+    ],
+    // Retiros de efectivo tomados de los comprobantes de BBVA que te llegan al correo.
+    retiros: [
+      { id: "r-2026-08-16", fecha: "2026-08-16", origen: "t3", monto: 1300, nota: "Cajero · cuenta **8848" },
+      { id: "r-2026-08-04", fecha: "2026-08-04", origen: "t3", monto: 2300, nota: "Cajero · cuenta **8848" },
+      { id: "r-2026-06-14", fecha: "2026-06-14", origen: "t3", monto: 3500, nota: "Cajero · cuenta **8848" }
     ]
   };
 
-  var VERSION = 2;
+  var VERSION = 3;
 
   /**
    * Los datos viven en el navegador, así que agregar algo al SEED no le llega
@@ -482,6 +540,16 @@
           medio: "", monto: 7800
         });
       }
+    }
+    if ((db.v || 1) < 3) {
+      if (!Array.isArray(db.retiros)) db.retiros = [];
+      SEED.retiros.forEach(function (r) {
+        if (!db.retiros.some(function (x) { return x.id === r.id; })) db.retiros.push(r);
+      });
+      // Marca la forma de pago en efectivo que ya existía, para poder cruzarla.
+      db.tarjetas.forEach(function (t) {
+        if (/efectivo/i.test(t.nombre)) t.efectivo = true;
+      });
     }
     db.v = VERSION;
     return db;
@@ -764,6 +832,151 @@
     });
   }
 
+  // ---------- efectivo ----------
+  /** Es efectivo si lo marcamos como tal o si el nombre lo dice — así también
+   *  cuenta una forma de pago que el usuario dé de alta después. */
+  function esEfectivo(id) {
+    for (var i = 0; i < DB.tarjetas.length; i++) {
+      if (DB.tarjetas[i].id === id) {
+        return DB.tarjetas[i].efectivo === true || /efectivo/i.test(DB.tarjetas[i].nombre);
+      }
+    }
+    return false;
+  }
+  function retirosDelPeriodo() {
+    return (DB.retiros || []).filter(delPeriodo)
+      .sort(function (a, b) { return a.fecha < b.fecha ? 1 : -1; });
+  }
+  function gastosEnEfectivo() {
+    return movs("salida").filter(function (m) { return esEfectivo(m.medio); })
+      .sort(function (a, b) { return a.fecha < b.fecha ? 1 : -1; });
+  }
+
+  function pintarEfectivo() {
+    var retiros = retirosDelPeriodo();
+    var gastos = gastosEnEfectivo();
+    var dispuesto = suma(retiros), comprobado = suma(gastos);
+    var falta = dispuesto - comprobado;
+
+    document.getElementById("ef-disp").textContent = mxn.format(dispuesto);
+    document.getElementById("ef-disp-s").textContent =
+      retiros.length + (retiros.length === 1 ? " retiro" : " retiros") + " en " + etiquetaPeriodo();
+    document.getElementById("ef-comp").textContent = mxn.format(comprobado);
+    document.getElementById("ef-comp-s").textContent =
+      gastos.length + (gastos.length === 1 ? " gasto" : " gastos") + " pagados en efectivo";
+
+    var vf = document.getElementById("ef-falta");
+    vf.textContent = mxn.format(falta);
+    vf.className = "v" + (falta < 0 ? " neg" : "");
+    document.getElementById("ef-falta-s").textContent = falta < 0
+      ? "Registraste más gasto que retiros: falta capturar una disposición"
+      : falta === 0 && dispuesto > 0 ? "Todo el efectivo está justificado"
+      : "Efectivo que sacaste y aún no aparece como gasto";
+
+    var pct = dispuesto > 0 ? Math.min(100, comprobado / dispuesto * 100) : 0;
+    var bar = document.getElementById("ef-bar");
+    bar.textContent = "";
+    var bloques = 32, on = Math.round(pct / 100 * bloques);
+    for (var i = 0; i < bloques; i++) {
+      var b = el("i");
+      if (i < on) b.className = "on";
+      bar.appendChild(b);
+    }
+    document.getElementById("ef-pct").textContent = dispuesto > 0 ? Math.round(pct) + "%" : "—";
+    document.getElementById("ef-hint").textContent = dispuesto > 0
+      ? mxn.format(comprobado) + " de " + mxn.format(dispuesto)
+      : "registra una disposición para calcularlo";
+
+    // tabla de disposiciones
+    var tabla = document.getElementById("t-ef");
+    tabla.textContent = "";
+    var thead = el("thead"), trh = el("tr");
+    ["Fecha", "Salió de", "Nota", "Monto", ""].forEach(function (c, i) {
+      trh.appendChild(el("th", i === 3 ? "n" : null, c));
+    });
+    thead.appendChild(trh);
+    tabla.appendChild(thead);
+
+    var tbody = el("tbody");
+    if (!retiros.length) {
+      var tr0 = el("tr"), td0 = el("td");
+      td0.colSpan = 5;
+      td0.appendChild(el("p", "vacio", "> sin disposiciones en " + etiquetaPeriodo()));
+      tr0.appendChild(td0);
+      tbody.appendChild(tr0);
+    } else {
+      retiros.forEach(function (r) {
+        var tr = el("tr");
+        tr.appendChild(el("td", null, r.fecha));
+        tr.appendChild(el("td", null, nombreDe(DB.tarjetas, r.origen) || "—"));
+        tr.appendChild(el("td", null, r.nota || "—"));
+        tr.appendChild(el("td", "n", mxn2.format(r.monto)));
+        var tdB = el("td");
+        tdB.appendChild(botonBorrar(function () {
+          DB.retiros = DB.retiros.filter(function (x) { return x.id !== r.id; });
+          guardar(); pintar();
+        }));
+        tr.appendChild(tdB);
+        tbody.appendChild(tr);
+      });
+    }
+    tabla.appendChild(tbody);
+
+    var tfoot = el("tfoot"), trf = el("tr");
+    var tdL = el("td", null, "Total  " + retiros.length + " mov.");
+    tdL.colSpan = 3;
+    trf.appendChild(tdL);
+    trf.appendChild(el("td", "n", mxn2.format(dispuesto)));
+    trf.appendChild(el("td"));
+    tfoot.appendChild(trf);
+    tabla.appendChild(tfoot);
+    document.getElementById("ef-disp-hint").textContent = etiquetaPeriodo();
+
+    // gastos que lo respaldan
+    var cont = document.getElementById("ef-gastos");
+    cont.textContent = "";
+    if (!gastos.length) {
+      cont.appendChild(el("p", "vacio", "> ninguna salida marcada como efectivo"));
+      return;
+    }
+    gastos.forEach(function (m) {
+      var r = el("div", "r");
+      var lbl = el("div", "lbl");
+      lbl.appendChild(el("b", null, m.concepto));
+      var partes = [m.fecha];
+      var cat = nombreDe(DB.categorias, m.categoria);
+      if (cat) partes.push(cat);
+      var prov = nombreDe(DB.proveedores, m.contraparte);
+      if (prov) partes.push(prov);
+      lbl.appendChild(el("small", null, partes.join("  ·  ")));
+      r.appendChild(lbl);
+      r.appendChild(el("span", "tag sal", "efectivo"));
+      r.appendChild(el("span", "amt sal", mxn2.format(m.monto)));
+      cont.appendChild(r);
+    });
+  }
+
+  document.getElementById("f-ef").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var d = new FormData(this);
+    var monto = parseFloat(d.get("monto"));
+    if (isNaN(monto)) return;
+    if (!Array.isArray(DB.retiros)) DB.retiros = [];
+    DB.retiros.push({
+      id: uid(),
+      fecha: d.get("fecha"),
+      origen: d.get("origen") || "",
+      monto: monto,
+      nota: String(d.get("nota") || "").trim()
+    });
+    guardar();
+    var f = d.get("fecha");
+    this.reset();
+    this.querySelector("[name=fecha]").value = f;
+    refrescarSelects();
+    pintar();
+  });
+
   // ---------- catálogo ----------
   function pintarCatalogo() {
     var lp = document.getElementById("l-prov");
@@ -846,6 +1059,12 @@
     llenarSelect(document.getElementById("fil-sal-cat"), catsSal, true);
     llenarSelect(document.getElementById("fil-sal-medio"), DB.tarjetas, true);
     llenarSelect(document.getElementById("fil-sal-prov"), DB.proveedores, true);
+
+    // El efectivo sale de una cuenta o tarjeta, no de sí mismo.
+    llenarSelect(
+      document.querySelector("#f-ef [name=origen]"),
+      DB.tarjetas.filter(function (t) { return !esEfectivo(t.id); }),
+      true, "— sin especificar —");
   }
 
   // ---------- alta de movimientos ----------
@@ -921,14 +1140,15 @@
   });
 
   // ---------- navegación ----------
-  var ETIQ = { resumen: "RESUMEN", entradas: "ENTRADAS", salidas: "SALIDAS", catalogo: "CATALOGO" };
+  var ETIQ = { resumen: "RESUMEN", entradas: "ENTRADAS", salidas: "SALIDAS", efectivo: "EFECTIVO", catalogo: "CATALOGO" };
+  var VISTAS = ["resumen", "entradas", "salidas", "efectivo", "catalogo"];
   Array.prototype.forEach.call(document.querySelectorAll(".tabs button"), function (b) {
     b.addEventListener("click", function () {
       vista = b.dataset.vista;
       Array.prototype.forEach.call(document.querySelectorAll(".tabs button"), function (o) {
         o.setAttribute("aria-selected", String(o === b));
       });
-      ["resumen", "entradas", "salidas", "catalogo"].forEach(function (v) {
+      VISTAS.forEach(function (v) {
         document.getElementById("v-" + v).hidden = v !== vista;
       });
       pintar();
@@ -948,6 +1168,7 @@
     if (vista === "resumen") pintarResumen();
     else if (vista === "entradas") pintarTabla("entrada");
     else if (vista === "salidas") { pintarTabla("salida"); pintarPorTarjeta(); }
+    else if (vista === "efectivo") pintarEfectivo();
     else pintarCatalogo();
   }
 
@@ -956,6 +1177,7 @@
   var hoyISO = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0") + "-" + String(hoy.getDate()).padStart(2, "0");
   document.querySelector("#f-ent [name=fecha]").value = hoyISO;
   document.querySelector("#f-sal [name=fecha]").value = hoyISO;
+  document.querySelector("#f-ef [name=fecha]").value = hoyISO;
   refrescarSelects();
   pintar();
 })();
